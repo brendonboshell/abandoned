@@ -46,18 +46,25 @@ afterQueried = function (err, results) {
     return (b.modifiedDate - a.modifiedDate);
   });
 
-  results.forEach(function (res) {
-    var ageDays,
-        isAbandoned;
+  results.forEach((package) => {
+    if (package.modifiedDate === null) {
+      table.push([
+        package.name,
+        colors.red('No information is available'),
+        colors.red('-'),
+      ]);
+    } else {
+      var ageDays, isAbandoned;
 
-    ageDays = ((new Date()) - res.modifiedDate) / 1000 / 60 / 60 / 24;
-    isAbandoned = ageDays > ABANDONED_DAYS;
+      ageDays = (new Date() - package.modifiedDate) / 1000 / 60 / 60 / 24;
+      isAbandoned = ageDays > ABANDONED_DAYS;
 
-    table.push([
-      res.name,
-      prettyDate.format(res.modifiedDate),
-      isAbandoned ? colors.red("Yes") : colors.green("No")
-    ]);
+      table.push([
+        package.name,
+        prettyDate.format(package.modifiedDate),
+        isAbandoned ? colors.red("Yes") : colors.green("No"),
+      ]);
+    }
   });
 
   console.log(table.toString());
@@ -76,7 +83,12 @@ async.map(packages, function (packageName, cb) {
       return cb(err);
     }
 
-    modifiedDate = new Date(resp.body.time.modified);
+    const time = resp.body.time;
+    if (time !== undefined) {
+      modifiedDate = new Date(time.modified);
+    } else {
+      modifiedDate = null;
+    };
 
     cb(null, {
       name: packageName,
